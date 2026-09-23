@@ -63,12 +63,35 @@
         A guided view into how I approach security engineering:
         validate the system, observe the behavior, question the signal, then build the control.
       </p>
+
+      <div class="trusted-use-summary">
+        <p class="mono micro">RESPONSIBLE ACCESS REQUIREMENT</p>
+        <p>
+          This environment contains interactive cybersecurity research and educational tools.
+          Use them only with files, systems, accounts, and information you own or are explicitly
+          authorized to examine.
+        </p>
+
+        <label class="trusted-check" for="trusted-use-check">
+          <input id="trusted-use-check" type="checkbox" />
+          <span>
+            I agree to the
+            <a href="trusted-use.html" target="_blank" rel="noopener noreferrer">Responsible &amp; Trusted Use Policy</a>.
+          </span>
+        </label>
+      </div>
+
       <div class="boot-progress" aria-hidden="true">
         <div id="boot-progress-bar"></div>
       </div>
       <div class="boot-status mono" id="boot-status">initializing public-safe profile…</div>
-      <button id="enter-btn" class="btn primary" type="button">Enter environment</button>
-      <button id="skip-btn" class="text-btn" type="button">Skip animation</button>
+
+      <div class="trusted-actions">
+        <button id="enter-btn" class="btn primary" type="button" disabled aria-disabled="true">Enter environment</button>
+        <a class="text-btn trusted-policy-link" href="trusted-use.html" target="_blank" rel="noopener noreferrer">Read the policy</a>
+      </div>
+
+      <p class="trusted-footnote">Explore responsibly. Investigate only what you are authorized to examine.</p>
     </div>
   </div>
 
@@ -590,8 +613,13 @@
         <strong>Ryszard Bialach</strong>
         <span>Security Engineering Portfolio</span>
       </div>
-      <div class="mono micro">
-        PUBLIC-SAFE BUILD // <span id="year"></span>
+      <div class="footer-meta">
+        <div class="footer-policy-links">
+          <a href="trusted-use.html#responsible-use">Responsible Use</a>
+          <a href="trusted-use.html#privacy">Privacy</a>
+          <a href=".well-known/security.txt">Security</a>
+        </div>
+        <div class="mono micro">PUBLIC-SAFE BUILD // <span id="year"></span></div>
       </div>
     </div>
   </footer>

@@ -109,9 +109,12 @@ const $$ = (sel, parent = document) => [...parent.querySelectorAll(sel)];
 function setupBoot() {
   const boot = $("#boot");
   const enter = $("#enter-btn");
-  const skip = $("#skip-btn");
+  const consent = $("#trusted-use-check");
   const bar = $("#boot-progress-bar");
   const status = $("#boot-status");
+
+  const POLICY_VERSION = "2026-09-v1";
+  const STORAGE_KEY = "rb_trusted_use_acceptance";
 
   const steps = [
     [18, "loading capability graph…"],
@@ -127,37 +130,76 @@ function setupBoot() {
       clearInterval(timer);
       return;
     }
-
     const [pct, text] = steps[index++];
     bar.style.width = `${pct}%`;
     status.textContent = text;
   }, 360);
 
+  function getAcceptance() {
+    try {
+      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      return Boolean(value && value.version === POLICY_VERSION && value.accepted === true);
+    } catch {
+      return false;
+    }
+  }
+
+  function saveAcceptance() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        accepted: true,
+        version: POLICY_VERSION,
+        acceptedAt: new Date().toISOString()
+      }));
+    } catch {
+      // The current visit can still proceed even if local storage is unavailable.
+    }
+  }
+
+  function setEnterState(enabled) {
+    enter.disabled = !enabled;
+    enter.setAttribute("aria-disabled", String(!enabled));
+  }
+
   function closeBoot() {
     boot.classList.add("hidden");
     sessionStorage.setItem("mindscape-entered", "true");
-
     setTimeout(() => {
       boot.remove();
-
-      // If the visitor arrived via #mind, #evidence, etc.,
-      // settle the page at the intended section after the overlay is gone.
       if (window.location.hash) {
         const target = document.querySelector(window.location.hash);
-        if (target) {
-          target.scrollIntoView({ block: "start" });
-        }
+        if (target) target.scrollIntoView({ block: "start" });
       }
     }, 650);
   }
 
-  enter.addEventListener("click", closeBoot);
-  skip.addEventListener("click", closeBoot);
+  const alreadyAccepted = getAcceptance();
+  if (alreadyAccepted) {
+    consent.checked = true;
+    setEnterState(true);
+    status.textContent = "trusted-use acknowledgement verified.";
+  } else {
+    setEnterState(false);
+  }
 
-  if (
-    sessionStorage.getItem("mindscape-entered") === "true" ||
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
+  consent.addEventListener("change", () => {
+    setEnterState(consent.checked);
+    status.textContent = consent.checked
+      ? "responsible-access acknowledgement ready."
+      : "acknowledgement required before entry.";
+  });
+
+  enter.addEventListener("click", () => {
+    if (!consent.checked) {
+      setEnterState(false);
+      status.textContent = "acknowledgement required before entry.";
+      return;
+    }
+    saveAcceptance();
+    closeBoot();
+  });
+
+  if (alreadyAccepted && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     closeBoot();
   }
 }

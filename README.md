@@ -47,3 +47,16 @@ The 3-D object is an abstract security visualization. It contains no dimensions,
 ## SafeCircle
 
 SafeCircle focuses on defensive social patterns: independent verification, supportive reporting, removing shame, protecting accounts, and cooperative escalation.
+
+
+## Responsible & Trusted Use gate
+
+- policy page: `trusted-use.html`
+- policy version: `2026-09-v1`
+- first-time human visitors must acknowledge the policy before entering
+- acceptance is stored client-side in `localStorage`
+- no account or backend tracking is required
+- the old Skip Animation bypass is removed
+- underlying HTML remains crawlable for SEO
+- footer links expose Responsible Use, Privacy, and Security information
+- the policy page uses `noindex,follow` so it does not compete with portfolio pages in search

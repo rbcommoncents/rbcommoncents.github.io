@@ -1,0 +1,4 @@
+Contact: https://ryszard-bialach2.com/#contact
+Canonical: https://ryszard-bialach2.com/.well-known/security.txt
+Policy: https://ryszard-bialach2.com/trusted-use.html#security-reporting
+Preferred-Languages: en
