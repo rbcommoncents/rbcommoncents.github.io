@@ -1,6 +1,6 @@
 
 const PROFILE = {
-  linkedin: "", // Add your full LinkedIn URL here when ready.
+  linkedin: "https://www.linkedin.com/in/cyberforensync/",
   github: "https://github.com/rbcommoncents"
 };
 

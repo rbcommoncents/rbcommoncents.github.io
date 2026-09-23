@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#071014" />
+  <title>ByteWitness — Static File Forensics | Ryszard Bialach</title>
+  <meta name="description" content="Privacy-first client-side static file inspection for metadata, magic bytes, hashes, strings, entropy, embedded signatures, PDF, image, and audio forensic indicators." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://ryszard-bialach2.com/bytewitness.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ByteWitness — Static File Forensics" />
+  <meta property="og:description" content="Privacy-first client-side static file inspection for metadata, magic bytes, hashes, strings, entropy, embedded signatures, PDF, image, and audio forensic indicators." />
+  <meta property="og:url" content="https://ryszard-bialach2.com/bytewitness.html" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+.drop-zone { padding: 42px 24px; border: 1px dashed var(--line-strong); border-radius: 16px; text-align:center; background: rgba(4,16,20,.56); transition:.2s ease; }
+.drop-zone.drag { border-color: var(--teal); background: rgba(21,63,62,.3); transform: translateY(-2px); }
+.drop-zone input { display:none; }
+.drop-zone strong { display:block; font-size:1.25rem; }
+.drop-zone p { margin:8px 0 18px; }
+.hash-value { font-family:"SFMono-Regular",Consolas,monospace; font-size:.73rem; word-break:break-all; color:#c7dbd7; }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin:22px 0 14px; }
+.tab { border:1px solid var(--line); border-radius:8px; background:rgba(4,15,19,.6); color:var(--muted); padding:8px 11px; cursor:pointer; }
+.tab.active { color:#05201b; background:var(--teal); border-color:var(--teal); }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+.artifact-tree { font-family:"SFMono-Regular",Consolas,monospace; font-size:.78rem; line-height:1.75; color:#c3d7d3; white-space:pre-wrap; }
+.string-list { max-height:360px; overflow:auto; padding:12px; border:1px solid var(--line); border-radius:10px; background:#030b0e; font-family:"SFMono-Regular",Consolas,monospace; font-size:.75rem; color:#b9cfcb; }
+.hex-view { max-height:380px; overflow:auto; padding:14px; border:1px solid var(--line); border-radius:10px; background:#02080b; color:#adc7c2; font: .72rem/1.55 "SFMono-Regular",Consolas,monospace; white-space:pre; }
+.entropy-bars { display:grid; gap:5px; }
+.entropy-row { display:grid; grid-template-columns:90px 1fr 50px; gap:10px; align-items:center; font-size:.72rem; color:var(--muted); }
+.entropy-bar { height:8px; background:#08191e; border-radius:999px; overflow:hidden; }
+.entropy-bar > i { display:block; height:100%; background:linear-gradient(90deg,var(--teal),var(--cyan)); }
+.image-lab { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+.image-lab canvas { width:100%; max-height:330px; object-fit:contain; border:1px solid var(--line); border-radius:10px; background:#02080a; image-rendering:pixelated; }
+.bit-controls { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+.bit-controls button { padding:6px 9px; border:1px solid var(--line); border-radius:7px; background:#081a1f; color:var(--muted); cursor:pointer; }
+.bit-controls button.active { color:#031914; background:var(--teal); }
+.analysis-note { font-size:.82rem; color:var(--muted); }
+@media(max-width:760px){ .image-lab{grid-template-columns:1fr;} }
+</style>
+</head>
+<body class="tool-page">
+<header class="topbar">
+    <a class="identity" href="index.html#top"><span class="identity-dot"></span><span>RYSZARD BIALACH</span></a>
+    <nav aria-label="Primary navigation">
+      <a href="index.html#mind">Mindmap</a><a href="index.html#evidence">Evidence</a><a href="index.html#lab">Lab</a><a href="index.html#contact">Connect</a>
+    </nav>
+    <div class="public-badge"><span class="shield">◇</span> PUBLIC LAB</div>
+  </header>
+<main class="tool-main shell">
+  <a class="back-to-lab" href="index.html#lab">← Back to Experimental Security Lab</a>
+  <div class="tool-hero">
+    <p class="eyebrow">LAB // 01 · STATIC DIGITAL FORENSICS</p>
+    <h1>ByteWitness</h1>
+    <p>Inspect what a file says about itself before anyone asks it to run. ByteWitness examines bytes, structure, metadata, strings, entropy, and embedded-file candidates entirely inside your browser.</p>
+    <div class="tool-banner"><strong>Your evidence stays with you.</strong> Files are read locally by this page. ByteWitness does not upload, execute, transmit, or retain the selected file.</div>
+  </div>
+
+  <section class="tool-grid">
+    <div>
+      <div class="tool-panel">
+        <div id="drop-zone" class="drop-zone">
+          <strong>Drop a file into the evidence bay</strong>
+          <p>or choose a file from this device. Recommended maximum: 64 MB.</p>
+          <label class="btn primary" for="file-input">Choose file</label>
+          <input id="file-input" type="file" />
+        </div>
+        <p class="analysis-note">Static analysis cannot establish that a file is safe or malicious. Findings are observations intended to support further investigation.</p>
+      </div>
+
+      <div id="results" hidden>
+        <div class="tool-section tool-stat-grid" id="summary-stats"></div>
+
+        <div class="tool-panel tool-section">
+          <p class="tool-section-title">FORENSIC OBSERVATIONS</p>
+          <div id="findings"></div>
+        </div>
+
+        <div class="tool-panel tool-section">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="structure">Structure</button>
+            <button class="tab" data-tab="strings">Strings</button>
+            <button class="tab" data-tab="entropy">Entropy</button>
+            <button class="tab" data-tab="hex">Hex</button>
+            <button class="tab" data-tab="image" id="image-tab" hidden>Image Lab</button>
+          </div>
+          <div class="tab-pane active" id="pane-structure"><pre class="artifact-tree" id="artifact-tree"></pre></div>
+          <div class="tab-pane" id="pane-strings"><div class="string-list" id="string-list"></div></div>
+          <div class="tab-pane" id="pane-entropy"><div id="entropy-bars" class="entropy-bars"></div></div>
+          <div class="tab-pane" id="pane-hex"><div class="hex-view" id="hex-view"></div></div>
+          <div class="tab-pane" id="pane-image">
+            <div class="bit-controls" id="bit-controls"></div>
+            <div class="image-lab"><canvas id="image-original"></canvas><canvas id="image-bitplane"></canvas></div>
+            <p class="analysis-note" id="image-note"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="tool-panel">
+        <p class="tool-section-title">WHAT BYTEWITNESS CHECKS</p>
+        <div class="proof-list">
+          <div class="proof">File extension versus observed magic bytes</div>
+          <div class="proof">SHA-256 and SHA-1 identifiers</div>
+          <div class="proof">Printable ASCII / UTF-16LE strings</div>
+          <div class="proof">Overall and block entropy</div>
+          <div class="proof">Embedded PDF, ZIP, image, ELF, SQLite, audio, and validated PE-like signatures</div>
+          <div class="proof">PDF actions, embedded-file markers, EOF and trailing data</div>
+          <div class="proof">PNG/JPEG boundaries and image least-significant-bit views</div>
+          <div class="proof">WAV/RIFF chunks, MP3 ID3 metadata, FLAC/Ogg container markers</div>
+        </div>
+      </div>
+      <div class="tool-panel tool-section">
+        <p class="tool-section-title">EVIDENCE STANDARD</p>
+        <p>ByteWitness reports <strong>what is observable</strong>. A valid secondary executable structure inside a document or audio file is stronger evidence than the letters “MZ” appearing by coincidence. Suspicion is not attribution, and unusualness is not proof of compromise.</p>
+      </div>
+    </aside>
+  </section>
+</main>
+<footer><div class="shell footer-grid"><div><strong>Ryszard Bialach</strong><span>Experimental Security Lab</span></div><div class="mono micro">CLIENT-SIDE // PUBLIC-SAFE</div></div></footer>
+<script src="bytewitness.js"></script>
+</body></html>

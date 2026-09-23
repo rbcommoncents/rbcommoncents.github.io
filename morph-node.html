@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#071014" />
+  <title>MORPH//NODE — IoT Cyber-Physical Threat Model | Ryszard Bialach</title>
+  <meta name="description" content="Interactive cyber-physical IoT security model exploring connectivity, sensing, actuation, autonomy, trust boundaries, and fail-safe controls." />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://ryszard-bialach2.com/morph-node.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="MORPH//NODE — IoT Cyber-Physical Threat Model" />
+  <meta property="og:description" content="Interactive cyber-physical IoT security model exploring connectivity, sensing, actuation, autonomy, trust boundaries, and fail-safe controls." />
+  <meta property="og:url" content="https://ryszard-bialach2.com/morph-node.html" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+.morph-layout { display:grid; grid-template-columns:1.2fr .8fr; gap:24px; }
+.blueprint-wrap { position:relative; min-height:620px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:radial-gradient(circle at center,rgba(109,225,203,.06),transparent 45%),#030b0e; }
+.blueprint-wrap::before { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(109,225,203,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(109,225,203,.04) 1px,transparent 1px); background-size:34px 34px; pointer-events:none; }
+#morph-canvas { position:absolute; inset:0; width:100%; height:100%; cursor:grab; }
+#morph-canvas:active { cursor:grabbing; }
+.blueprint-label { position:absolute; left:18px; top:16px; color:var(--teal); font:700 .7rem/1.3 "SFMono-Regular",Consolas,monospace; letter-spacing:.12em; }
+.mode-buttons, .control-list { display:grid; gap:9px; }
+.mode-btn, .module-btn { width:100%; text-align:left; padding:12px 13px; border:1px solid var(--line); border-radius:9px; background:rgba(5,17,21,.65); color:#bdd0cc; cursor:pointer; }
+.mode-btn.active, .module-btn.active { border-color:var(--teal); color:var(--teal); background:rgba(19,55,55,.45); }
+.control-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+.switch { position:relative; width:44px; height:24px; border:0; border-radius:999px; background:#183038; cursor:pointer; }
+.switch::after { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; border-radius:50%; background:#9cb1ad; transition:.2s; }
+.switch.on { background:rgba(109,225,203,.35); }
+.switch.on::after { left:23px; background:var(--teal); }
+.trust-meter { margin-top:16px; height:10px; border-radius:999px; overflow:hidden; background:#061419; }
+.trust-meter i { display:block; height:100%; width:50%; background:linear-gradient(90deg,#ff9b9b,var(--amber),var(--teal)); transition:width .35s ease; }
+.state-box { margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:10px; background:rgba(4,15,19,.55); }
+@media(max-width:900px){ .morph-layout{grid-template-columns:1fr;} .blueprint-wrap{min-height:500px;} }
+</style>
+</head><body class="tool-page"><header class="topbar">
+    <a class="identity" href="index.html#top"><span class="identity-dot"></span><span>RYSZARD BIALACH</span></a>
+    <nav aria-label="Primary navigation">
+      <a href="index.html#mind">Mindmap</a><a href="index.html#evidence">Evidence</a><a href="index.html#lab">Lab</a><a href="index.html#contact">Connect</a>
+    </nav>
+    <div class="public-badge"><span class="shield">◇</span> PUBLIC LAB</div>
+  </header>
+<main class="tool-main shell">
+  <a class="back-to-lab" href="index.html#lab">← Back to Experimental Security Lab</a>
+  <div class="tool-hero">
+    <p class="eyebrow">LAB // 02 · CYBER-PHYSICAL THREAT MODELING</p>
+    <h1>MORPH//NODE</h1>
+    <p>The endpoint can move now. Explore a fictional connected field node that can change operating environments and see how communication, sensing, autonomy, and physical actuation change the cybersecurity problem.</p>
+    <div class="tool-banner"><strong>Concept model only.</strong> This experience demonstrates IoT and cyber-physical security relationships. It intentionally omits dimensions, propulsion details, construction methods, control code, and other build instructions.</div>
+  </div>
+
+  <section class="morph-layout">
+    <div class="blueprint-wrap">
+      <div class="blueprint-label">ABSTRACT CYBER-PHYSICAL NODE // DRAG TO ROTATE</div>
+      <canvas id="morph-canvas"></canvas>
+    </div>
+    <aside>
+      <div class="tool-panel">
+        <p class="tool-section-title">OPERATING CONTEXT</p>
+        <div class="mode-buttons" id="mode-buttons">
+          <button class="mode-btn active" data-mode="ground">GROUND / MOBILE</button>
+          <button class="mode-btn" data-mode="climb">CLIMB / VERTICAL</button>
+          <button class="mode-btn" data-mode="flight">FLIGHT / AIRBORNE</button>
+          <button class="mode-btn" data-mode="subsurface">SUBSURFACE / CONFINED</button>
+        </div>
+      </div>
+
+      <div class="tool-panel tool-section">
+        <p class="tool-section-title">SELECT SECURITY SURFACE</p>
+        <div class="mode-buttons" id="module-buttons">
+          <button class="module-btn active" data-module="compute">EDGE COMPUTE</button>
+          <button class="module-btn" data-module="radio">RADIO / CONNECTIVITY</button>
+          <button class="module-btn" data-module="sensors">SENSORS / PERCEPTION</button>
+          <button class="module-btn" data-module="actuation">ACTUATION / PHYSICAL EFFECT</button>
+          <button class="module-btn" data-module="autonomy">AUTONOMY / DECISION LOOP</button>
+        </div>
+        <div class="state-box" id="module-detail"></div>
+      </div>
+
+      <div class="tool-panel tool-section">
+        <p class="tool-section-title">CONTROL POSTURE</p>
+        <div class="control-list" id="controls"></div>
+        <div class="trust-meter"><i id="trust-bar"></i></div>
+        <div class="state-box" id="trust-state"></div>
+      </div>
+    </aside>
+  </section>
+</main>
+<footer><div class="shell footer-grid"><div><strong>Ryszard Bialach</strong><span>Experimental Security Lab</span></div><div class="mono micro">CLIENT-SIDE // PUBLIC-SAFE</div></div></footer><script src="morph-node.js"></script></body></html>

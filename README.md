@@ -1,87 +1,49 @@
-# Cyber Mindscape Portfolio — Version 2.2 — Recruiter SEO
+# Cyber Mindscape Portfolio v3 — Experimental Security Lab
 
-This is a static, privacy-conscious GitHub Pages portfolio for `ryszard-bialach2.com`.
+This release extends the existing GitHub Pages portfolio with three fully static, client-side experiments.
 
-## What is included
+## New pages
 
-- Animated entry experience
-- Lightweight animated network background
-- Interactive cybersecurity capability map
-- Evidence-based project case files
-- Certification / education signals
-- Selected professional experience
-- Public-disclosure boundary section
-- Recruiter-oriented contact path
-- Responsive layout and reduced-motion support
-- No third-party JavaScript libraries
+- `bytewitness.html` + `bytewitness.js` — privacy-first static digital forensics
+- `morph-node.html` + `morph-node.js` — abstract IoT / cyber-physical threat model
+- `safecircle.html` + `safecircle.js` — cooperative human-security scenarios
 
-## Publish
+The homepage now includes an **Experimental Security Lab** section linking to all three tools.
 
-Upload these files to the root of `rbcommoncents.github.io`:
+## GitHub Pages compatibility
 
-- `index.html`
-- `styles.css`
-- `app.js`
+No server, database, API key, package manager, build step, or external JavaScript library is required. Upload the files directly to the root of `rbcommoncents.github.io` and commit to `main`.
+
+Keep:
+- `CNAME` with `ryszard-bialach2.com`
 - `.nojekyll`
-- `CNAME`
+- GitHub Pages source: `main` / root
+- Enforce HTTPS enabled
 
-Keep GitHub Pages configured to:
+## ByteWitness privacy model
 
-- Source: Deploy from a branch
-- Branch: `main`
-- Folder: `/ (root)`
-- Custom domain: `ryszard-bialach2.com`
-- Enforce HTTPS: enabled
+ByteWitness reads the selected file using browser APIs. The file is not intentionally transmitted to the site owner or a third-party service. The public build limits analysis to 64 MB for browser stability and performs static inspection only.
 
-## Add LinkedIn
+Supported v1 observations include:
+- extension vs magic bytes
+- SHA-256 and SHA-1
+- ASCII and UTF-16LE strings
+- overall and block entropy
+- embedded signatures
+- validated PE-like structures using MZ + e_lfanew + PE\0\0
+- PDF action markers and bytes after `%%EOF`
+- PNG chunks and data after `IEND`
+- JPEG data after EOI
+- image least-significant-bit visualizations
+- WAV RIFF chunks / bytes beyond declared container
+- MP3 ID3 size, FLAC/Ogg/MP4-style identification
 
-Open `app.js` and edit the `PROFILE` object near the top:
+It intentionally does not execute files or claim that a finding proves maliciousness.
 
-```js
-const PROFILE = {
-  linkedin: "https://www.linkedin.com/in/YOUR-PROFILE/",
-  github: "https://github.com/rbcommoncents"
-};
-```
+## MORPH//NODE safety boundary
 
-If `linkedin` is left blank, the LinkedIn button remains hidden.
+The 3-D object is an abstract security visualization. It contains no dimensions, propulsion design, construction steps, control code, or other instructions for building a dangerous autonomous device.
 
-## Public-safety design
+## SafeCircle
 
-The site intentionally does not publish:
-
-- phone number
-- home address or exact personal location
-- certification IDs
-- credentials or API secrets
-- private lab IP addresses
-- private hostnames
-- full internal topology
-- complete scrape-ready employment history
-
-Important: no public webpage can be made impossible to scrape. The practical control is to avoid placing sensitive information in the public HTML in the first place.
-
-## Suggested next additions
-
-1. Dedicated NetFlow research page
-2. Sanitized Maproom architecture diagram
-3. Resume-on-request professional contact workflow
-4. Project screenshots
-5. Open Graph social preview image
-6. Optional case-study pages under `/projects/`
-
-
-## v2.1 reliability fix
-
-This release fixes a rendering condition where the capability map and its
-evidence panel could remain invisible because the scroll-reveal observer had
-not promoted the large elements from `opacity: 0`.
-
-The capability map is now critical content and always renders. Scroll animation
-is treated as progressive enhancement, with a timed fallback for every other
-reveal element. Hash navigation is also restored after the entry overlay closes.
-
-
-## v2.2 recruiter SEO layer
-
-Added recruiter-intent metadata, canonical URLs, ProfilePage/Person JSON-LD, natural target-role language, three crawlable cybersecurity case-study pages, internal links, robots.txt, sitemap.xml, and a public-safe security.txt. No phone number, exact location, credential IDs, private infrastructure, or secrets are included.
+SafeCircle focuses on defensive social patterns: independent verification, supportive reporting, removing shame, protecting accounts, and cooperative escalation.
