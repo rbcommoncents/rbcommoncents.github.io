@@ -7,7 +7,7 @@ const svg = $("#morph-svg");
 const NS = "http://www.w3.org/2000/svg";
 
 let yaw = 0.58;
-let pitch = -0.28;
+let pitch = -0.24;
 let dragging = false;
 let lastX = 0;
 let lastY = 0;
@@ -15,6 +15,8 @@ let autoRotate = true;
 let currentMode = "ground";
 let currentModule = "compute";
 let lastFrame = performance.now();
+let lastRender = 0;
+let resumeTimer = null;
 
 const modules = {
   compute: {
@@ -94,14 +96,16 @@ function rotatePoint([x,y,z]) {
 
 function project(point) {
   const [x,y,z] = rotatePoint(point);
-  const camera = 9.5;
-  const focal = 600;
-  const denom = Math.max(3.2, camera + z);
+
+  // Deliberately enlarged relative to v3.1 so the model owns the blueprint bay.
+  const camera = 9.7;
+  const focal = 970;
+  const denom = Math.max(3.3, camera + z);
   const scale = focal / denom;
 
   return {
     x: 400 + x * scale,
-    y: 315 + y * scale,
+    y: 305 + y * scale,
     z,
     scale
   };
@@ -122,14 +126,26 @@ function cube(cx,cy,cz,sx,sy,sz) {
 
 function line(group, a, b, cls="wire") {
   group.appendChild(svgEl("line", {
-    x1: a.x.toFixed(2), y1: a.y.toFixed(2),
-    x2: b.x.toFixed(2), y2: b.y.toFixed(2),
+    x1: a.x.toFixed(2),
+    y1: a.y.toFixed(2),
+    x2: b.x.toFixed(2),
+    y2: b.y.toFixed(2),
     class: cls
   }));
 }
 
-function drawCube(group, vertices, cls="wire") {
+function drawCube(group, vertices, cls="wire", addFace=false) {
   const pts = vertices.map(project);
+
+  if (addFace) {
+    const face = [pts[0],pts[1],pts[5],pts[4]]
+      .map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(" ");
+    group.appendChild(svgEl("polygon", {
+      points: face,
+      class: "hull-face"
+    }));
+  }
 
   const sortedEdges = cubeEdges
     .map(([a,b]) => ({a,b,z:(pts[a].z + pts[b].z)/2}))
@@ -143,7 +159,7 @@ function drawCube(group, vertices, cls="wire") {
     group.appendChild(svgEl("circle", {
       cx: p.x.toFixed(2),
       cy: p.y.toFixed(2),
-      r: Math.max(1.8, Math.min(3.1, 2.2 * p.scale / 60)).toFixed(2),
+      r: Math.max(2.0, Math.min(3.6, 2.4 * p.scale / 85)).toFixed(2),
       class: "node-dot"
     }));
   }
@@ -151,66 +167,106 @@ function drawCube(group, vertices, cls="wire") {
 
 function polyline3D(group, points, cls="wire-secondary") {
   const pts = points.map(project);
-  for (let i=0; i<pts.length-1; i++) line(group, pts[i], pts[i+1], cls);
+  for (let i=0; i<pts.length-1; i++) {
+    line(group, pts[i], pts[i+1], cls);
+  }
 }
 
 function ring3D(group, center, radius, axis="y", cls="mode-accent") {
   const pts = [];
-  const steps = 42;
+  const steps = 48;
+
   for (let i=0; i<=steps; i++) {
     const t = Math.PI * 2 * i / steps;
     let p;
-    if (axis === "y") p = [center[0] + Math.cos(t)*radius, center[1], center[2] + Math.sin(t)*radius];
-    else if (axis === "x") p = [center[0], center[1] + Math.cos(t)*radius, center[2] + Math.sin(t)*radius];
-    else p = [center[0] + Math.cos(t)*radius, center[1] + Math.sin(t)*radius, center[2]];
+
+    if (axis === "y") {
+      p = [center[0] + Math.cos(t)*radius, center[1], center[2] + Math.sin(t)*radius];
+    } else if (axis === "x") {
+      p = [center[0], center[1] + Math.cos(t)*radius, center[2] + Math.sin(t)*radius];
+    } else {
+      p = [center[0] + Math.cos(t)*radius, center[1] + Math.sin(t)*radius, center[2]];
+    }
+
     pts.push(p);
   }
+
   polyline3D(group, pts, cls);
 }
 
 function drawModeAccents(group) {
   if (currentMode === "flight") {
-    [[2.4,0,0],[-2.4,0,0],[0,0,1.9],[0,0,-1.9]].forEach(p => ring3D(group,p,.72,"y"));
+    [[2.45,0,0],[-2.45,0,0],[0,0,1.95],[0,0,-1.95]]
+      .forEach(p => ring3D(group,p,.78,"y"));
+
+    ring3D(group,[0,0,0],3.25,"z","depth-ring");
+
   } else if (currentMode === "ground") {
-    ring3D(group,[-1.55,.72,0],.58,"z");
-    ring3D(group,[1.55,.72,0],.58,"z");
-    polyline3D(group,[[-2.1,.95,-.85],[2.1,.95,-.85],[2.1,.95,.85],[-2.1,.95,.85],[-2.1,.95,-.85]],"mode-accent");
+    ring3D(group,[-1.55,.78,0],.64,"z");
+    ring3D(group,[1.55,.78,0],.64,"z");
+
+    polyline3D(
+      group,
+      [[-2.15,1.03,-.9],[2.15,1.03,-.9],[2.15,1.03,.9],[-2.15,1.03,.9],[-2.15,1.03,-.9]],
+      "mode-accent"
+    );
+
   } else if (currentMode === "climb") {
-    polyline3D(group,[[-2.7,-2.4,0],[-2.7,2.4,0]],"mode-accent");
-    polyline3D(group,[[2.7,-2.4,0],[2.7,2.4,0]],"mode-accent");
-    ring3D(group,[-2.45,0,0],.48,"x");
-    ring3D(group,[2.45,0,0],.48,"x");
+    polyline3D(group,[[-2.85,-2.45,0],[-2.85,2.45,0]],"mode-accent");
+    polyline3D(group,[[2.85,-2.45,0],[2.85,2.45,0]],"mode-accent");
+    ring3D(group,[-2.5,0,0],.55,"x");
+    ring3D(group,[2.5,0,0],.55,"x");
+
   } else if (currentMode === "subsurface") {
-    ring3D(group,[0,0,0],2.7,"z");
-    ring3D(group,[0,0,0],3.25,"z");
-    polyline3D(group,[[-3.5,0,0],[3.5,0,0]],"mode-accent");
+    ring3D(group,[0,0,0],2.85,"z");
+    ring3D(group,[0,0,0],3.45,"z");
+    polyline3D(group,[[-3.55,0,0],[3.55,0,0]],"mode-accent");
   }
 }
 
 const callouts = {
-  compute: { point:[0,0,0], label:[595,115], title:"EDGE COMPUTE" },
-  radio: { point:[0,0,1.7], label:[628,215], title:"RADIO / LINK" },
-  sensors: { point:[0,-.62,-.84], label:[102,118], title:"SENSORS" },
-  actuation: { point:[2.35,0,0], label:[620,485], title:"ACTUATION" },
-  autonomy: { point:[0,.45,-.5], label:[105,505], title:"AUTONOMY" }
+  sensors: {
+    point:[0,-1.35,0],
+    label:[72,112],
+    title:"SENSORS"
+  },
+  compute: {
+    point:[0,0,0],
+    label:[625,112],
+    title:"EDGE COMPUTE"
+  },
+  radio: {
+    point:[0,0,1.95],
+    label:[650,235],
+    title:"RADIO / LINK"
+  },
+  actuation: {
+    point:[2.45,0,0],
+    label:[650,492],
+    title:"ACTUATION"
+  },
+  autonomy: {
+    point:[0,.45,-.5],
+    label:[74,500],
+    title:"AUTONOMY"
+  }
 };
 
 function drawCallouts(group) {
   for (const [key,c] of Object.entries(callouts)) {
     const p = project(c.point);
     const active = key === currentModule;
-    const bendX = c.label[0] < 400 ? c.label[0] + 110 : c.label[0] - 35;
-    const bendY = c.label[1];
+    const leftSide = c.label[0] < 400;
+    const elbowX = leftSide ? c.label[0] + 112 : c.label[0] - 38;
 
-    const path = svgEl("path", {
-      d: `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} L ${bendX} ${bendY} L ${c.label[0]} ${bendY}`,
+    group.appendChild(svgEl("path", {
+      d: `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} L ${elbowX} ${c.label[1]} L ${c.label[0]} ${c.label[1]}`,
       class: "callout" + (active ? " active" : "")
-    });
-    group.appendChild(path);
+    }));
 
     const text = svgEl("text", {
       x: c.label[0],
-      y: c.label[1] - 5,
+      y: c.label[1] - 6,
       class: "callout-label" + (active ? " active" : "")
     });
     text.textContent = c.title;
@@ -220,7 +276,7 @@ function drawCallouts(group) {
       group.appendChild(svgEl("circle", {
         cx: p.x.toFixed(2),
         cy: p.y.toFixed(2),
-        r: 5.5,
+        r: 6.5,
         class: "core-dot"
       }));
     }
@@ -228,75 +284,131 @@ function drawCallouts(group) {
 }
 
 function drawAxes(group) {
-  const axes = [
-    [[-3.5,0,0],[3.5,0,0]],
-    [[0,-2.6,0],[0,2.6,0]],
-    [[0,0,-3],[0,0,3]]
-  ];
-  axes.forEach(a => polyline3D(group,a,"axis"));
+  [
+    [[-3.6,0,0],[3.6,0,0]],
+    [[0,-2.65,0],[0,2.65,0]],
+    [[0,0,-3.2],[0,0,3.2]]
+  ].forEach(a => polyline3D(group,a,"axis"));
 }
 
-function renderModel() {
-  svg.replaceChildren();
+function buildScene() {
+  const fragment = document.createDocumentFragment();
 
   const defs = svgEl("defs");
-  const glow = svgEl("filter", { id:"glow", x:"-40%", y:"-40%", width:"180%", height:"180%" });
-  glow.appendChild(svgEl("feGaussianBlur", { stdDeviation:"3", result:"blur" }));
+
+  const glow = svgEl("filter", {
+    id:"glow",
+    x:"-60%",
+    y:"-60%",
+    width:"220%",
+    height:"220%"
+  });
+
+  glow.appendChild(svgEl("feGaussianBlur", {
+    stdDeviation:"4",
+    result:"blur"
+  }));
+
   const merge = svgEl("feMerge");
   merge.appendChild(svgEl("feMergeNode", { in:"blur" }));
   merge.appendChild(svgEl("feMergeNode", { in:"SourceGraphic" }));
   glow.appendChild(merge);
   defs.appendChild(glow);
-  svg.appendChild(defs);
+  fragment.appendChild(defs);
 
   const group = svgEl("g");
-  svg.appendChild(group);
 
   drawAxes(group);
 
-  // Abstract central compute chassis.
-  drawCube(group, cube(0,0,0,1.55,.72,.9), "wire");
+  // Larger abstract central compute chassis.
+  drawCube(group, cube(0,0,0,1.7,.78,1.0), "wire", true);
 
-  // Four abstract connected actuator / radio pods.
-  const pods = [[2.35,0,0],[-2.35,0,0],[0,0,1.9],[0,0,-1.9]];
+  // Connected endpoint / actuator pods.
+  const pods = [
+    [2.45,0,0],
+    [-2.45,0,0],
+    [0,0,1.95],
+    [0,0,-1.95]
+  ];
+
   pods.forEach(p => {
-    drawCube(group, cube(p[0],p[1],p[2],.48,.45,.58), "wire-secondary");
+    drawCube(group, cube(p[0],p[1],p[2],.52,.48,.62), "wire-secondary", true);
     line(group, project([0,0,0]), project(p), "trust-path");
   });
 
-  // Upper sensor mast and lower autonomy core are deliberately abstract.
-  drawCube(group, cube(0,-1.35,0,.48,.28,.48), "wire-secondary");
-  polyline3D(group, [[0,-.72,0],[0,-1.08,0]], "trust-path");
+  // Sensor assembly + abstract autonomy region.
+  drawCube(group, cube(0,-1.45,0,.52,.3,.52), "wire-secondary", true);
+  polyline3D(group, [[0,-.78,0],[0,-1.15,0]], "trust-path");
 
   const center = project([0,0,0]);
+
   group.appendChild(svgEl("circle", {
-    cx:center.x.toFixed(2), cy:center.y.toFixed(2), r:7.5,
-    class:"core-dot", filter:"url(#glow)"
+    cx:center.x.toFixed(2),
+    cy:center.y.toFixed(2),
+    r:8.5,
+    class:"core-dot",
+    filter:"url(#glow)"
   }));
+
+  // Blueprint depth references make rotation easier to read.
+  ring3D(group,[0,0,0],2.25,"y","depth-ring");
+  ring3D(group,[0,0,0],2.25,"x","depth-ring");
 
   drawModeAccents(group);
   drawCallouts(group);
 
-  const modeText = svgEl("text", {
-    x:"24", y:"588",
+  const status = svgEl("text", {
+    x:"24",
+    y:"588",
     class:"callout-label active"
   });
-  modeText.textContent = `${currentMode.toUpperCase()} MODE // ABSTRACT SECURITY VISUALIZATION`;
-  group.appendChild(modeText);
+
+  status.textContent =
+    `${currentMode.toUpperCase()} MODE // ${autoRotate ? "AUTO ROTATE" : "MANUAL VIEW"} // ABSTRACT SECURITY VISUALIZATION`;
+
+  group.appendChild(status);
+
+  const hint = svgEl("text", {
+    x:"776",
+    y:"588",
+    "text-anchor":"end",
+    class:"status-label"
+  });
+
+  hint.textContent = "NO BUILD DIMENSIONS // THREAT MODEL ONLY";
+  group.appendChild(hint);
+
+  fragment.appendChild(group);
+
+  // One atomic DOM operation prevents blank frames.
+  svg.replaceChildren(fragment);
 }
 
 function animate(now) {
   const dt = Math.min(50, now - lastFrame);
   lastFrame = now;
-  if (autoRotate) yaw += dt * 0.00022;
-  renderModel();
+
+  if (autoRotate) {
+    yaw += dt * 0.00018;
+  }
+
+  // 30 fps is visually smooth for this blueprint and easier on the browser.
+  if (now - lastRender >= 33) {
+    buildScene();
+    lastRender = now;
+  }
+
   requestAnimationFrame(animate);
 }
+
 requestAnimationFrame(animate);
 
 svg.addEventListener("pointerdown", e => {
   dragging = true;
   autoRotate = false;
+
+  if (resumeTimer) clearTimeout(resumeTimer);
+
   lastX = e.clientX;
   lastY = e.clientY;
   svg.setPointerCapture(e.pointerId);
@@ -304,40 +416,71 @@ svg.addEventListener("pointerdown", e => {
 
 svg.addEventListener("pointermove", e => {
   if (!dragging) return;
+
   yaw += (e.clientX - lastX) * 0.008;
   pitch += (e.clientY - lastY) * 0.008;
-  pitch = Math.max(-1.15, Math.min(1.15, pitch));
+
+  pitch = Math.max(-1.12, Math.min(1.12, pitch));
+
   lastX = e.clientX;
   lastY = e.clientY;
 });
 
-function stopDrag() { dragging = false; }
+function stopDrag() {
+  if (!dragging) return;
+  dragging = false;
+
+  // Resume ambient rotation after the visitor has had time to inspect the view.
+  resumeTimer = setTimeout(() => {
+    autoRotate = true;
+  }, 3500);
+}
+
 svg.addEventListener("pointerup", stopDrag);
 svg.addEventListener("pointercancel", stopDrag);
 
 svg.addEventListener("dblclick", () => {
   autoRotate = !autoRotate;
+  if (resumeTimer) clearTimeout(resumeTimer);
 });
 
 function renderModule(key) {
   currentModule = key;
-  $$(".module-btn").forEach(b => b.classList.toggle("active", b.dataset.module === key));
+
+  $$(".module-btn").forEach(
+    b => b.classList.toggle("active", b.dataset.module === key)
+  );
+
   const m = modules[key];
+
   $("#module-detail").innerHTML = `
     <strong>${m.title}</strong>
     <p>${m.text}</p>
-    <div class="chip-row">${m.controls.map(x => `<span>${x}</span>`).join("")}</div>
-    <p><strong>${currentMode.toUpperCase()} CONTEXT:</strong> ${modes[currentMode]}</p>
+    <div class="chip-row">
+      ${m.controls.map(x => `<span>${x}</span>`).join("")}
+    </div>
+    <p>
+      <strong>${currentMode.toUpperCase()} CONTEXT:</strong>
+      ${modes[currentMode]}
+    </p>
   `;
 }
 
-$$(".module-btn").forEach(b => b.addEventListener("click", () => renderModule(b.dataset.module)));
+$$(".module-btn").forEach(
+  b => b.addEventListener("click", () => renderModule(b.dataset.module))
+);
 
-$$(".mode-btn").forEach(b => b.addEventListener("click", () => {
-  currentMode = b.dataset.mode;
-  $$(".mode-btn").forEach(x => x.classList.toggle("active", x === b));
-  renderModule(currentModule);
-}));
+$$(".mode-btn").forEach(
+  b => b.addEventListener("click", () => {
+    currentMode = b.dataset.mode;
+
+    $$(".mode-btn").forEach(
+      x => x.classList.toggle("active", x === b)
+    );
+
+    renderModule(currentModule);
+  })
+);
 
 renderModule("compute");
 
@@ -348,6 +491,7 @@ function renderControls() {
   for (const [id,label] of controlDefs) {
     const row = document.createElement("div");
     row.className = "control-row";
+
     row.innerHTML = `
       <span>${label}</span>
       <button
@@ -357,18 +501,22 @@ function renderControls() {
         title="Toggle ${label}">
       </button>
     `;
+
     root.appendChild(row);
   }
 
-  $$(".switch",root).forEach(b => b.addEventListener("click", () => {
-    state[b.dataset.id] = !state[b.dataset.id];
-    renderControls();
-    updateTrust();
-  }));
+  $$(".switch",root).forEach(
+    b => b.addEventListener("click", () => {
+      state[b.dataset.id] = !state[b.dataset.id];
+      renderControls();
+      updateTrust();
+    })
+  );
 }
 
 function updateTrust() {
   let score = 42;
+
   for (const [id,,,weight] of controlDefs) {
     if (state[id]) score += weight;
   }
@@ -377,9 +525,11 @@ function updateTrust() {
   $("#trust-bar").style.width = score + "%";
 
   const label =
-    score >= 78 ? "CONSTRAINED / RESILIENT" :
-    score >= 55 ? "CONDITIONAL / REVIEW" :
-    "EXPOSED / HIGH DEPENDENCE";
+    score >= 78
+      ? "CONSTRAINED / RESILIENT"
+      : score >= 55
+      ? "CONDITIONAL / REVIEW"
+      : "EXPOSED / HIGH DEPENDENCE";
 
   $("#trust-state").innerHTML = `
     <strong>${label}</strong>
@@ -393,3 +543,4 @@ function updateTrust() {
 
 renderControls();
 updateTrust();
+buildScene();
