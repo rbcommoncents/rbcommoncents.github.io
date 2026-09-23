@@ -1,0 +1,3 @@
+Canonical: https://ryszard-bialach2.com/.well-known/security.txt
+Policy: https://ryszard-bialach2.com/#contact
+Preferred-Languages: en
