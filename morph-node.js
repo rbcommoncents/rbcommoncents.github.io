@@ -1,53 +1,395 @@
 "use strict";
-const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
-const canvas=$('#morph-canvas'), ctx=canvas.getContext('2d');
-let yaw=.55,pitch=-.25,drag=false,lastX=0,lastY=0,auto=true,currentMode='ground';
 
-const modules={
-  compute:{title:'EDGE COMPUTE',text:'The compute boundary holds firmware, policy, keys, local models, and decision logic. Compromise here can affect every downstream subsystem.',controls:['Signed firmware','Measured boot','Least privilege']},
-  radio:{title:'RADIO / CONNECTIVITY',text:'Connectivity expands the trust boundary beyond the chassis. Remote management, mesh peers, cloud dependencies, and update channels all require authenticated and constrained paths.',controls:['Mutual authentication','Network segmentation','Egress policy']},
-  sensors:{title:'SENSORS / PERCEPTION',text:'A system can be computationally intact and still make unsafe decisions if its perception is spoofed, stale, or untrustworthy. Sensor provenance becomes a security property.',controls:['Sensor attestation','Cross-sensor validation','Failure detection']},
-  actuation:{title:'ACTUATION / PHYSICAL EFFECT',text:'When software controls movement or physical force, cybersecurity becomes safety engineering. Commands need authorization, bounds, and an independent path to stop.',controls:['Command authorization','Physical limits','Safe halt']},
-  autonomy:{title:'AUTONOMY / DECISION LOOP',text:'Autonomy combines perception, policy, and actuation. Security must constrain what the system is allowed to decide—not only who is allowed to log in.',controls:['Policy envelope','Human override','Decision logging']}
+const $ = (s, p=document) => p.querySelector(s);
+const $$ = (s, p=document) => [...p.querySelectorAll(s)];
+
+const svg = $("#morph-svg");
+const NS = "http://www.w3.org/2000/svg";
+
+let yaw = 0.58;
+let pitch = -0.28;
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+let autoRotate = true;
+let currentMode = "ground";
+let currentModule = "compute";
+let lastFrame = performance.now();
+
+const modules = {
+  compute: {
+    title: "EDGE COMPUTE",
+    text: "The compute boundary holds firmware, policy, keys, local models, and decision logic. Compromise here can affect every downstream subsystem.",
+    controls: ["Signed firmware", "Measured boot", "Least privilege"]
+  },
+  radio: {
+    title: "RADIO / CONNECTIVITY",
+    text: "Connectivity expands the trust boundary beyond the chassis. Remote management, mesh peers, cloud dependencies, and update channels all require authenticated and constrained paths.",
+    controls: ["Mutual authentication", "Network segmentation", "Egress policy"]
+  },
+  sensors: {
+    title: "SENSORS / PERCEPTION",
+    text: "A system can be computationally intact and still make unsafe decisions if its perception is spoofed, stale, or untrustworthy. Sensor provenance becomes a security property.",
+    controls: ["Sensor attestation", "Cross-sensor validation", "Failure detection"]
+  },
+  actuation: {
+    title: "ACTUATION / PHYSICAL EFFECT",
+    text: "When software controls movement or physical force, cybersecurity becomes safety engineering. Commands need authorization, bounds, and an independent path to stop.",
+    controls: ["Command authorization", "Physical limits", "Safe halt"]
+  },
+  autonomy: {
+    title: "AUTONOMY / DECISION LOOP",
+    text: "Autonomy combines perception, policy, and actuation. Security must constrain what the system is allowed to decide—not only who is allowed to log in.",
+    controls: ["Policy envelope", "Human override", "Decision logging"]
+  }
 };
-const modes={
-  ground:'Ground operation increases interaction with nearby people, local wireless networks, and physical obstacles.',
-  climb:'Vertical operation raises sensor-integrity and fail-safe concerns because loss of control can immediately create physical consequences.',
-  flight:'Airborne operation amplifies navigation, link-loss, spoofing, and safe-return requirements. Connectivity failure must not become uncontrolled behavior.',
-  subsurface:'Confined operation reduces connectivity and increases dependence on local autonomy, stored policy, robust sensing, and deterministic safe states.'
+
+const modes = {
+  ground: "Ground operation increases interaction with nearby people, local wireless networks, and physical obstacles.",
+  climb: "Vertical operation raises sensor-integrity and fail-safe concerns because loss of control can immediately create physical consequences.",
+  flight: "Airborne operation amplifies navigation, link-loss, spoofing, and safe-return requirements. Connectivity failure must not become uncontrolled behavior.",
+  subsurface: "Confined operation reduces connectivity and increases dependence on local autonomy, stored policy, robust sensing, and deterministic safe states."
 };
-const controlDefs=[
-  ['signed','Signed firmware',true,14],['auth','Mutual authentication',true,12],['segment','Segmented network path',true,10],['attest','Sensor cross-checks',true,12],['halt','Independent safe halt',true,18],['logs','Decision logging',true,8],['public','Direct public control path',false,-18],['broad','Broad actuator privilege',false,-16]
+
+const controlDefs = [
+  ["signed", "Signed firmware", true, 14],
+  ["auth", "Mutual authentication", true, 12],
+  ["segment", "Segmented network path", true, 10],
+  ["attest", "Sensor cross-checks", true, 12],
+  ["halt", "Independent safe halt", true, 18],
+  ["logs", "Decision logging", true, 8],
+  ["public", "Direct public control path", false, -18],
+  ["broad", "Broad actuator privilege", false, -16]
 ];
-const state=Object.fromEntries(controlDefs.map(x=>[x[0],x[2]]));
 
-function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=r.width*d;canvas.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);}
-window.addEventListener('resize',resize); resize();
+const state = Object.fromEntries(controlDefs.map(x => [x[0], x[2]]));
 
-function rot(p){let [x,y,z]=p; const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch); let x1=x*cy-z*sy,z1=x*sy+z*cy; let y1=y*cp-z1*sp,z2=y*sp+z1*cp; return [x1,y1,z2];}
-function project(p,w,h){const [x,y,z]=rot(p),s=380/(6+z);return [w/2+x*s,h/2+y*s,s];}
-function box(cx,cy,cz,sx,sy,sz){const v=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])v.push([cx+x*sx,cy+y*sy,cz+z*sz]);return v;}
-const edges=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
-function drawBox(v,w,h,color='rgba(109,225,203,.62)'){const pts=v.map(p=>project(p,w,h));ctx.strokeStyle=color;ctx.lineWidth=1;for(const [a,b] of edges){ctx.beginPath();ctx.moveTo(pts[a][0],pts[a][1]);ctx.lineTo(pts[b][0],pts[b][1]);ctx.stroke();}for(const p of pts){ctx.fillStyle='rgba(115,207,255,.72)';ctx.beginPath();ctx.arc(p[0],p[1],2,0,Math.PI*2);ctx.fill();}}
-function frame(){const w=canvas.clientWidth,h=canvas.clientHeight;ctx.clearRect(0,0,w,h);if(auto)yaw+=.0025;
-  ctx.save();ctx.globalCompositeOperation='lighter';
-  drawBox(box(0,0,0,1.55,.65,.85),w,h);
-  const pods=[[2.35,0,0],[-2.35,0,0],[0,0,1.85],[0,0,-1.85]]; pods.forEach(p=>drawBox(box(...p,.45,.42,.55),w,h,'rgba(115,207,255,.5)'));
-  // abstract limbs / trust paths
-  ctx.strokeStyle='rgba(109,225,203,.45)';ctx.setLineDash([5,7]);
-  const c=project([0,0,0],w,h); for(const p of pods){const q=project(p,w,h);ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();}
-  ctx.setLineDash([]);ctx.restore();
-  ctx.fillStyle='rgba(238,248,246,.8)';ctx.font='12px SFMono-Regular, Consolas, monospace';ctx.fillText(currentMode.toUpperCase()+' MODE',18,h-22);
-  requestAnimationFrame(frame);
-} requestAnimationFrame(frame);
-canvas.addEventListener('pointerdown',e=>{drag=true;auto=false;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);});
-canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-lastX)*.008;pitch+=(e.clientY-lastY)*.008;pitch=Math.max(-1.2,Math.min(1.2,pitch));lastX=e.clientX;lastY=e.clientY;});
-canvas.addEventListener('pointerup',()=>drag=false);
+const cubeEdges = [
+  [0,1],[0,2],[0,4],
+  [1,3],[1,5],
+  [2,3],[2,6],
+  [3,7],
+  [4,5],[4,6],
+  [5,7],[6,7]
+];
 
-function renderModule(key){$$('.module-btn').forEach(b=>b.classList.toggle('active',b.dataset.module===key));const m=modules[key];$('#module-detail').innerHTML=`<strong>${m.title}</strong><p>${m.text}</p><div class="chip-row">${m.controls.map(x=>`<span>${x}</span>`).join('')}</div>`;}
-$$('.module-btn').forEach(b=>b.addEventListener('click',()=>renderModule(b.dataset.module)));renderModule('compute');
-$$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{currentMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#module-detail').insertAdjacentHTML('beforeend',`<p><strong>${currentMode.toUpperCase()} CONTEXT:</strong> ${modes[currentMode]}</p>`);}));
+function svgEl(name, attrs={}) {
+  const el = document.createElementNS(NS, name);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
 
-function renderControls(){const root=$('#controls');root.innerHTML='';for(const [id,label,_,weight] of controlDefs){const row=document.createElement('div');row.className='control-row';row.innerHTML=`<span>${label}</span><button class="switch ${state[id]?'on':''}" aria-pressed="${state[id]}" data-id="${id}" title="Toggle ${label}"></button>`;root.appendChild(row);} $$('.switch',root).forEach(b=>b.addEventListener('click',()=>{state[b.dataset.id]=!state[b.dataset.id];renderControls();updateTrust();}));}
-function updateTrust(){let score=42;for(const [id,,,weight] of controlDefs)if(state[id])score+=weight;score=Math.max(5,Math.min(100,score));$('#trust-bar').style.width=score+'%';let label=score>=78?'CONSTRAINED / RESILIENT':score>=55?'CONDITIONAL / REVIEW':'EXPOSED / HIGH DEPENDENCE';$('#trust-state').innerHTML=`<strong>${label}</strong><p>Control posture index: ${score}/100. This is an educational illustration, not a quantitative safety certification. The important question is which assumptions fail when connectivity, sensing, or autonomy changes.</p>`;}
-renderControls();updateTrust();
+function rotatePoint([x,y,z]) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+
+  const x1 = x * cy - z * sy;
+  const z1 = x * sy + z * cy;
+
+  const y1 = y * cp - z1 * sp;
+  const z2 = y * sp + z1 * cp;
+
+  return [x1, y1, z2];
+}
+
+function project(point) {
+  const [x,y,z] = rotatePoint(point);
+  const camera = 9.5;
+  const focal = 600;
+  const denom = Math.max(3.2, camera + z);
+  const scale = focal / denom;
+
+  return {
+    x: 400 + x * scale,
+    y: 315 + y * scale,
+    z,
+    scale
+  };
+}
+
+function cube(cx,cy,cz,sx,sy,sz) {
+  return [
+    [cx-sx, cy-sy, cz-sz],
+    [cx-sx, cy-sy, cz+sz],
+    [cx-sx, cy+sy, cz-sz],
+    [cx-sx, cy+sy, cz+sz],
+    [cx+sx, cy-sy, cz-sz],
+    [cx+sx, cy-sy, cz+sz],
+    [cx+sx, cy+sy, cz-sz],
+    [cx+sx, cy+sy, cz+sz]
+  ];
+}
+
+function line(group, a, b, cls="wire") {
+  group.appendChild(svgEl("line", {
+    x1: a.x.toFixed(2), y1: a.y.toFixed(2),
+    x2: b.x.toFixed(2), y2: b.y.toFixed(2),
+    class: cls
+  }));
+}
+
+function drawCube(group, vertices, cls="wire") {
+  const pts = vertices.map(project);
+
+  const sortedEdges = cubeEdges
+    .map(([a,b]) => ({a,b,z:(pts[a].z + pts[b].z)/2}))
+    .sort((m,n) => n.z - m.z);
+
+  for (const edge of sortedEdges) {
+    line(group, pts[edge.a], pts[edge.b], cls);
+  }
+
+  for (const p of pts) {
+    group.appendChild(svgEl("circle", {
+      cx: p.x.toFixed(2),
+      cy: p.y.toFixed(2),
+      r: Math.max(1.8, Math.min(3.1, 2.2 * p.scale / 60)).toFixed(2),
+      class: "node-dot"
+    }));
+  }
+}
+
+function polyline3D(group, points, cls="wire-secondary") {
+  const pts = points.map(project);
+  for (let i=0; i<pts.length-1; i++) line(group, pts[i], pts[i+1], cls);
+}
+
+function ring3D(group, center, radius, axis="y", cls="mode-accent") {
+  const pts = [];
+  const steps = 42;
+  for (let i=0; i<=steps; i++) {
+    const t = Math.PI * 2 * i / steps;
+    let p;
+    if (axis === "y") p = [center[0] + Math.cos(t)*radius, center[1], center[2] + Math.sin(t)*radius];
+    else if (axis === "x") p = [center[0], center[1] + Math.cos(t)*radius, center[2] + Math.sin(t)*radius];
+    else p = [center[0] + Math.cos(t)*radius, center[1] + Math.sin(t)*radius, center[2]];
+    pts.push(p);
+  }
+  polyline3D(group, pts, cls);
+}
+
+function drawModeAccents(group) {
+  if (currentMode === "flight") {
+    [[2.4,0,0],[-2.4,0,0],[0,0,1.9],[0,0,-1.9]].forEach(p => ring3D(group,p,.72,"y"));
+  } else if (currentMode === "ground") {
+    ring3D(group,[-1.55,.72,0],.58,"z");
+    ring3D(group,[1.55,.72,0],.58,"z");
+    polyline3D(group,[[-2.1,.95,-.85],[2.1,.95,-.85],[2.1,.95,.85],[-2.1,.95,.85],[-2.1,.95,-.85]],"mode-accent");
+  } else if (currentMode === "climb") {
+    polyline3D(group,[[-2.7,-2.4,0],[-2.7,2.4,0]],"mode-accent");
+    polyline3D(group,[[2.7,-2.4,0],[2.7,2.4,0]],"mode-accent");
+    ring3D(group,[-2.45,0,0],.48,"x");
+    ring3D(group,[2.45,0,0],.48,"x");
+  } else if (currentMode === "subsurface") {
+    ring3D(group,[0,0,0],2.7,"z");
+    ring3D(group,[0,0,0],3.25,"z");
+    polyline3D(group,[[-3.5,0,0],[3.5,0,0]],"mode-accent");
+  }
+}
+
+const callouts = {
+  compute: { point:[0,0,0], label:[595,115], title:"EDGE COMPUTE" },
+  radio: { point:[0,0,1.7], label:[628,215], title:"RADIO / LINK" },
+  sensors: { point:[0,-.62,-.84], label:[102,118], title:"SENSORS" },
+  actuation: { point:[2.35,0,0], label:[620,485], title:"ACTUATION" },
+  autonomy: { point:[0,.45,-.5], label:[105,505], title:"AUTONOMY" }
+};
+
+function drawCallouts(group) {
+  for (const [key,c] of Object.entries(callouts)) {
+    const p = project(c.point);
+    const active = key === currentModule;
+    const bendX = c.label[0] < 400 ? c.label[0] + 110 : c.label[0] - 35;
+    const bendY = c.label[1];
+
+    const path = svgEl("path", {
+      d: `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} L ${bendX} ${bendY} L ${c.label[0]} ${bendY}`,
+      class: "callout" + (active ? " active" : "")
+    });
+    group.appendChild(path);
+
+    const text = svgEl("text", {
+      x: c.label[0],
+      y: c.label[1] - 5,
+      class: "callout-label" + (active ? " active" : "")
+    });
+    text.textContent = c.title;
+    group.appendChild(text);
+
+    if (active) {
+      group.appendChild(svgEl("circle", {
+        cx: p.x.toFixed(2),
+        cy: p.y.toFixed(2),
+        r: 5.5,
+        class: "core-dot"
+      }));
+    }
+  }
+}
+
+function drawAxes(group) {
+  const axes = [
+    [[-3.5,0,0],[3.5,0,0]],
+    [[0,-2.6,0],[0,2.6,0]],
+    [[0,0,-3],[0,0,3]]
+  ];
+  axes.forEach(a => polyline3D(group,a,"axis"));
+}
+
+function renderModel() {
+  svg.replaceChildren();
+
+  const defs = svgEl("defs");
+  const glow = svgEl("filter", { id:"glow", x:"-40%", y:"-40%", width:"180%", height:"180%" });
+  glow.appendChild(svgEl("feGaussianBlur", { stdDeviation:"3", result:"blur" }));
+  const merge = svgEl("feMerge");
+  merge.appendChild(svgEl("feMergeNode", { in:"blur" }));
+  merge.appendChild(svgEl("feMergeNode", { in:"SourceGraphic" }));
+  glow.appendChild(merge);
+  defs.appendChild(glow);
+  svg.appendChild(defs);
+
+  const group = svgEl("g");
+  svg.appendChild(group);
+
+  drawAxes(group);
+
+  // Abstract central compute chassis.
+  drawCube(group, cube(0,0,0,1.55,.72,.9), "wire");
+
+  // Four abstract connected actuator / radio pods.
+  const pods = [[2.35,0,0],[-2.35,0,0],[0,0,1.9],[0,0,-1.9]];
+  pods.forEach(p => {
+    drawCube(group, cube(p[0],p[1],p[2],.48,.45,.58), "wire-secondary");
+    line(group, project([0,0,0]), project(p), "trust-path");
+  });
+
+  // Upper sensor mast and lower autonomy core are deliberately abstract.
+  drawCube(group, cube(0,-1.35,0,.48,.28,.48), "wire-secondary");
+  polyline3D(group, [[0,-.72,0],[0,-1.08,0]], "trust-path");
+
+  const center = project([0,0,0]);
+  group.appendChild(svgEl("circle", {
+    cx:center.x.toFixed(2), cy:center.y.toFixed(2), r:7.5,
+    class:"core-dot", filter:"url(#glow)"
+  }));
+
+  drawModeAccents(group);
+  drawCallouts(group);
+
+  const modeText = svgEl("text", {
+    x:"24", y:"588",
+    class:"callout-label active"
+  });
+  modeText.textContent = `${currentMode.toUpperCase()} MODE // ABSTRACT SECURITY VISUALIZATION`;
+  group.appendChild(modeText);
+}
+
+function animate(now) {
+  const dt = Math.min(50, now - lastFrame);
+  lastFrame = now;
+  if (autoRotate) yaw += dt * 0.00022;
+  renderModel();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+svg.addEventListener("pointerdown", e => {
+  dragging = true;
+  autoRotate = false;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  svg.setPointerCapture(e.pointerId);
+});
+
+svg.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  yaw += (e.clientX - lastX) * 0.008;
+  pitch += (e.clientY - lastY) * 0.008;
+  pitch = Math.max(-1.15, Math.min(1.15, pitch));
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+function stopDrag() { dragging = false; }
+svg.addEventListener("pointerup", stopDrag);
+svg.addEventListener("pointercancel", stopDrag);
+
+svg.addEventListener("dblclick", () => {
+  autoRotate = !autoRotate;
+});
+
+function renderModule(key) {
+  currentModule = key;
+  $$(".module-btn").forEach(b => b.classList.toggle("active", b.dataset.module === key));
+  const m = modules[key];
+  $("#module-detail").innerHTML = `
+    <strong>${m.title}</strong>
+    <p>${m.text}</p>
+    <div class="chip-row">${m.controls.map(x => `<span>${x}</span>`).join("")}</div>
+    <p><strong>${currentMode.toUpperCase()} CONTEXT:</strong> ${modes[currentMode]}</p>
+  `;
+}
+
+$$(".module-btn").forEach(b => b.addEventListener("click", () => renderModule(b.dataset.module)));
+
+$$(".mode-btn").forEach(b => b.addEventListener("click", () => {
+  currentMode = b.dataset.mode;
+  $$(".mode-btn").forEach(x => x.classList.toggle("active", x === b));
+  renderModule(currentModule);
+}));
+
+renderModule("compute");
+
+function renderControls() {
+  const root = $("#controls");
+  root.innerHTML = "";
+
+  for (const [id,label] of controlDefs) {
+    const row = document.createElement("div");
+    row.className = "control-row";
+    row.innerHTML = `
+      <span>${label}</span>
+      <button
+        class="switch ${state[id] ? "on" : ""}"
+        aria-pressed="${state[id]}"
+        data-id="${id}"
+        title="Toggle ${label}">
+      </button>
+    `;
+    root.appendChild(row);
+  }
+
+  $$(".switch",root).forEach(b => b.addEventListener("click", () => {
+    state[b.dataset.id] = !state[b.dataset.id];
+    renderControls();
+    updateTrust();
+  }));
+}
+
+function updateTrust() {
+  let score = 42;
+  for (const [id,,,weight] of controlDefs) {
+    if (state[id]) score += weight;
+  }
+
+  score = Math.max(5, Math.min(100, score));
+  $("#trust-bar").style.width = score + "%";
+
+  const label =
+    score >= 78 ? "CONSTRAINED / RESILIENT" :
+    score >= 55 ? "CONDITIONAL / REVIEW" :
+    "EXPOSED / HIGH DEPENDENCE";
+
+  $("#trust-state").innerHTML = `
+    <strong>${label}</strong>
+    <p>
+      Control posture index: ${score}/100. This is an educational illustration,
+      not a quantitative safety certification. The important question is which
+      assumptions fail when connectivity, sensing, or autonomy changes.
+    </p>
+  `;
+}
+
+renderControls();
+updateTrust();
