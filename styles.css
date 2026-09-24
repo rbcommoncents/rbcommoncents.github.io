@@ -937,6 +937,46 @@ footer {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  /* ======================================================
+     MOBILE ACCESS / BOOT SCREEN
+     ====================================================== */
+
+  .boot-screen {
+    align-items: flex-start;
+    justify-content: flex-start;
+
+    height: 100dvh;
+    max-height: 100dvh;
+
+    overflow-x: hidden;
+    overflow-y: auto !important;
+
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+
+    padding:
+      20px
+      14px
+      calc(88px + env(safe-area-inset-bottom));
+
+    box-sizing: border-box;
+  }
+
+  .boot-panel {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+
+    padding: 24px;
+
+    box-sizing: border-box;
+  }
+
+  .boot-mark {
+    margin-bottom: 22px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
