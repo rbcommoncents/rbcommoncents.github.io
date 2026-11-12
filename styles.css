@@ -1181,3 +1181,17 @@ footer {
 .policy-callout { padding:18px; border:1px solid var(--line-strong); border-radius:11px; background:rgba(8,27,31,.62); color:#d0e2de; }
 .policy-not-legal { margin-top:34px; color:#748985; font-size:.79rem; }
 @media (max-width:780px) { .footer-meta{justify-items:start;} .footer-policy-links{justify-content:flex-start;} .policy-grid{grid-template-columns:1fr;} .policy-nav{position:static;} }
+
+/* Accessible mobile navigation — cheeseburger silhouette */
+.mobile-nav-toggle { display:none; width:44px; height:44px; border:1px solid var(--line); border-radius:10px; background:rgba(109,225,203,.08); color:var(--teal); align-items:center; justify-content:center; cursor:pointer; }
+.mobile-nav-toggle:hover,.mobile-nav-toggle:focus-visible { background:rgba(109,225,203,.17); outline-offset:3px; }
+.mobile-site-nav[hidden] { display:none !important; }
+.mobile-site-nav { display:none; }
+@media (max-width:980px) {
+  .topbar { position:sticky; grid-template-columns:minmax(0,1fr) auto; }
+  .topbar .mobile-nav-toggle { display:inline-flex; grid-column:2; grid-row:1; }
+  .topbar .public-badge { display:none; }
+  .topbar .mobile-site-nav:not([hidden]) { display:flex; position:absolute; top:100%; left:0; right:0; flex-direction:column; gap:0; padding:8px 16px 14px; background:#071317; border-bottom:1px solid var(--line); box-shadow:0 14px 24px rgba(0,0,0,.35); max-height:calc(100dvh - 68px); overflow-y:auto; z-index:60; }
+  .topbar .mobile-site-nav a { display:block; padding:13px 12px; border-radius:6px; font-size:.95rem; color:#d2e2df; }
+  .topbar .mobile-site-nav a:hover,.topbar .mobile-site-nav a:focus-visible { background:rgba(109,225,203,.1); color:var(--teal); }
+}
