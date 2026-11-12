@@ -60,3 +60,10 @@ SafeCircle focuses on defensive social patterns: independent verification, suppo
 - underlying HTML remains crawlable for SEO
 - footer links expose Responsible Use, Privacy, and Security information
 - the policy page uses `noindex,follow` so it does not compete with portfolio pages in search
+
+## Maproom research page
+
+- `maproom.html` — public-safe overview of bounded local AI work, the governance pipeline, findings, and proposed Trainer/controller functions.
+- Homepage now includes a Maproom feature linking to the research page.
+- `sitemap.xml` includes the new URL.
+- No form backend or mailing list is enabled; the contact link leads to the existing site contact section.

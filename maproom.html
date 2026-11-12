@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#071014" />
+<title>Maproom | Governed Local AI Research | Ryszard Bialach</title>
+<meta name="description" content="Maproom is an ongoing home-lab research project exploring bounded local AI work, independent evaluation, and enforceable authority boundaries." />
+<meta name="robots" content="index,follow,max-image-preview:large" />
+<link rel="canonical" href="https://ryszard-bialach2.com/maproom.html" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Maproom — Governed Local AI Research" />
+<meta property="og:description" content="What an independent local AI lab has taught us about bounded tasks, evidence, review and authority." />
+<meta property="og:url" content="https://ryszard-bialach2.com/maproom.html" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+.maproom-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:24px 0 34px}
+.maproom-stat,.maproom-panel{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:22px}
+.maproom-stat strong{display:block;color:var(--teal);font-size:1.1rem;margin-bottom:8px}
+.maproom-stat span,.maproom-panel p,.maproom-panel li{color:var(--muted)}
+.maproom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0 30px}
+.maproom-panel h2{font-size:1.35rem;margin:0 0 12px}
+.maproom-panel ul{padding-left:1.3rem}
+.maproom-tag{display:inline-block;border:1px solid var(--line-strong);border-radius:100px;color:var(--teal);padding:4px 11px;font:.72rem Consolas,monospace;letter-spacing:.06em;margin-bottom:12px}
+.maproom-callout{border-left:3px solid var(--teal);padding:12px 20px;background:rgba(109,225,203,.06);border-radius:0 10px 10px 0;margin:28px 0}
+.maproom-callout p{margin:0;color:var(--text)}
+.maproom-cta{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 35px}
+@media(max-width:760px){.maproom-stats,.maproom-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="project-page">
+<header class="topbar"><a class="identity" href="/"><span class="identity-dot"></span><span>RYSZARD BIALACH</span></a><nav aria-label="Primary navigation"><a href="/#evidence">Evidence</a><a href="/#lab">Lab</a><a href="/#contact">Connect</a></nav><div class="public-badge"><span class="shield">◇</span> PUBLIC VIEW</div></header>
+<main>
+<section class="project-hero shell">
+<a class="back-link" href="/#evidence">← Back to evidence deck</a>
+<p class="eyebrow">LOCAL AI · GOVERNANCE · SECURITY RESEARCH</p>
+<h1>Maproom</h1>
+<p class="project-lead">An ongoing investigation into whether local AI workers can perform bounded tasks, preserve evidence, undergo independent review, and improve over time without controlling their own security boundaries.</p>
+<div class="maproom-stats" aria-label="Research focus">
+<div class="maproom-stat"><strong>01 / Work</strong><span>Small, inspectable assignments instead of all-at-once prompts.</span></div>
+<div class="maproom-stat"><strong>02 / Evidence</strong><span>Traceable outputs, tests, decisions, and operational telemetry.</span></div>
+<div class="maproom-stat"><strong>03 / Authority</strong><span>Permissions established by trusted infrastructure, not a model's assertions.</span></div>
+</div>
+</section>
+<section class="project-body shell">
+<div class="maproom-callout"><p><strong>The research question:</strong> Can a collection of specialized AI workers perform useful work and progressively improve while external systems retain control of permissions, approvals, and deployment?</p></div>
+<div class="maproom-grid">
+<article class="maproom-panel"><span class="maproom-tag">EXPERIMENT TO DATE</span><h2>Django, one component at a time</h2><p>A locally hosted Qwen model was used in a modular Django development exercise, producing foundational configuration and elements of landing and registration functionality. The result was not a complete production application.</p><p>Breaking large assignments into bounded pieces helped make generated work easier to inspect and carry forward without repeatedly sending an entire project into model context. Quantitative improvements have not yet been published.</p></article>
+<article class="maproom-panel"><span class="maproom-tag">SECURITY FOUNDATION</span><h2>Segmentation and observation</h2><p>The lab uses Linux services, Proxmox, managed VLANs, OPNsense firewall controls, PostgreSQL, and Grafana/Loki observability. Qwen runs locally, and the AI environment is designed around restricted communication paths.</p><p>Network segmentation, monitoring, and model refusal behavior are not substitutes for application-layer authorization. Exact private topology and operational details are intentionally omitted.</p></article>
+<article class="maproom-panel"><span class="maproom-tag">WORKFLOW RESEARCH</span><h2>Builder → Reviewer → Manager → Steward</h2><p>The research pipeline separates work generation, assessment, next-step decisions, and governance. An important design requirement is preserving the original artifact and review evidence across each handoff.</p><p>The complete autonomous lifecycle should not be interpreted as fully deployed or independently audited.</p></article>
+<article class="maproom-panel"><span class="maproom-tag">UNDER DEVELOPMENT</span><h2>Trainer and trusted controller</h2><p>The proposed Trainer will diagnose recurring failure modes and support bounded improvement campaigns, including scheduled evaluation of the Manager. A separate trusted controller is intended to verify authority before approved changes reach application code or infrastructure.</p><p>Centralized identity services such as FreeIPA and API identities are possible future extensions, not existing deployed controls.</p></article>
+</div>
+<div class="maproom-panel"><span class="maproom-tag">WHAT THE EXPERIMENT TEACHES</span><h2>Govern the process, not just the prompt</h2><ul><li>Bounded tasks can reduce the amount of change that must be reviewed, but scope is only enforceable when the tools and execution environment honor it.</li><li>Artifact hashes, logs, and evaluations can establish traceability; they do not independently prove that an output is safe.</li><li>A model's ability to propose an action does not confer permission to perform it.</li><li>Training is an evidence-driven decision, not the automatic response to every failed task.</li></ul></div>
+<div class="maproom-panel" style="margin-top:16px"><span class="maproom-tag">FOLLOW THE RESEARCH</span><h2>Interested in the next experiment?</h2><p>This page is an introduction, not a commitment to a publishing schedule. Feedback will help determine whether future updates focus on technical walkthroughs, governance tests, or reproducible home-lab exercises.</p><p>If the project resonates, share which aspect you would want explored next: bounded AI tasks, trust boundaries, observability, or model evaluation and training.</p><div class="maproom-cta"><a class="btn primary" href="/#contact">Get in touch</a><a class="btn ghost" href="https://github.com/rbcommoncents" target="_blank" rel="noopener noreferrer">Explore GitHub profile</a><a class="btn ghost" href="secure-infrastructure-lab.html">Infrastructure case study</a></div><p class="muted">No email subscription or analytics collection is enabled by this page.</p></div>
+</section>
+</main>
+<footer><div class="shell footer-grid"><div><strong>Ryszard Bialach</strong><span>Cybersecurity Engineering Portfolio</span></div><div class="footer-meta"><div class="footer-policy-links"><a href="trusted-use.html#responsible-use">Responsible Use</a><a href="trusted-use.html#privacy">Privacy</a><a href=".well-known/security.txt">Security</a></div><div class="mono micro">PUBLIC-SAFE RESEARCH OVERVIEW</div></div></div></footer>
+</body></html>
